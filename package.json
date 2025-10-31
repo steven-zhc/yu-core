@@ -13,6 +13,9 @@
     "typescript-eslint": "^8.46.2",
     "vitest": "^4.0.4"
   },
+  "dependencies": {
+    "nanoid": "^5.1.6"
+  },
   "engines": {
     "node": ">=22"
   },
