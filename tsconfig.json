@@ -5,7 +5,9 @@
     "outDir": "dist",
     "types": ["node", "vitest"],
     "resolveJsonModule": true,
-    "verbatimModuleSyntax": true
+    "verbatimModuleSyntax": true,
+    "declaration": true,
+    "declarationMap": true
   },
   "include": [
     "src/**/*.ts"

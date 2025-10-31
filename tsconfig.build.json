@@ -5,7 +5,8 @@
         "rootDir": "src",
         "outDir": "dist",
         "strict": true,
-        "declaration": true
+        "declaration": true,
+        "declarationMap": true
     },
     "include": [
         "src/**/*.ts"

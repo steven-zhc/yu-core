@@ -20,7 +20,7 @@
     "node": ">=22"
   },
   "scripts": {
-    "build": "tsc --project tsconfig.json",
+    "build": "tsc --project tsconfig.build.json",
     "dev": "tsc -p tsconfig.json --watch --preserveWatchOutput",
     "format": "prettier --write src/**/*.ts tests/**/*.ts",
     "lint": "eslint src/**/*.ts",
@@ -34,6 +34,25 @@
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./domain": {
+      "types": "./dist/domain/index.d.ts",
+      "default": "./dist/domain/index.js"
+    },
+    "./state-sourcing": {
+      "types": "./dist/state-sourcing/index.d.ts",
+      "default": "./dist/state-sourcing/index.js"
+    },
+    "./event-sourcing": {
+      "types": "./dist/event-sourcing/index.d.ts",
+      "default": "./dist/event-sourcing/index.js"
+    }
+  },
+  "typesVersions": {
+    "*": {
+      "domain": ["dist/domain/index.d.ts"],
+      "state-sourcing": ["dist/state-sourcing/index.d.ts"],
+      "event-sourcing": ["dist/event-sourcing/index.d.ts"]
     }
   }
 }
