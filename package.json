@@ -9,6 +9,7 @@
     "@vitest/coverage-v8": "^4.0.4",
     "eslint": "^9.38.0",
     "eslint-config-prettier": "^9.1.0",
+    "prettier": "^3.6.2",
     "typescript": "^5.6.3",
     "typescript-eslint": "^8.46.2",
     "vitest": "^4.0.4"
@@ -50,9 +51,15 @@
   },
   "typesVersions": {
     "*": {
-      "domain": ["dist/domain/index.d.ts"],
-      "state-sourcing": ["dist/state-sourcing/index.d.ts"],
-      "event-sourcing": ["dist/event-sourcing/index.d.ts"]
+      "domain": [
+        "dist/domain/index.d.ts"
+      ],
+      "state-sourcing": [
+        "dist/state-sourcing/index.d.ts"
+      ],
+      "event-sourcing": [
+        "dist/event-sourcing/index.d.ts"
+      ]
     }
   }
 }
