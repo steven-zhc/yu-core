@@ -15,6 +15,7 @@
     "vitest": "^4.0.4"
   },
   "dependencies": {
+    "emittery": "^1.0.3",
     "nanoid": "^5.1.6"
   },
   "engines": {

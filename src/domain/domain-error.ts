@@ -34,7 +34,7 @@ export const toDomainError =
       return mkDomainError(tag, err.message)
     }
     // For any other value (object, null, undefined, symbol, etc)
-    return mkDomainError(tag, String(err))
+    return mkDomainError(tag, JSON.stringify(err))
   }
 
 export const showDomainError = <T>(error: DomainError): string => {
