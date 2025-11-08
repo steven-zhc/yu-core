@@ -4,7 +4,7 @@
  */
 
 import Emittery from 'emittery'
-import type { DomainEvent } from './domain-event.js'
+import { type DomainEvent, showDomainEvent } from './domain-event.js'
 
 /**
  * Event handler function type.
@@ -18,6 +18,9 @@ export interface EventBusErrorEvent {
   event: DomainEvent<any>
   error: unknown
 }
+
+export const showEventBusError = (errorEvent: EventBusErrorEvent): string =>
+  `${showDomainEvent(errorEvent.event)} :: ${JSON.stringify(errorEvent.error)}`
 
 export type ErrorHandler = (err: EventBusErrorEvent) => void | Promise<void>
 

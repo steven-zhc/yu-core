@@ -23,22 +23,13 @@ export class DomainEvent<TPayload> {
   }
 }
 
-export const mkDomainEvent = <T>(
-  tag: string,
-  cid: string,
-  aid: string,
-  payload: T
-): DomainEvent<T> => {
+export const mkDomainEvent = <T>(tag: string, cid: string, aid: string, payload: T): DomainEvent<T> => {
   return new DomainEvent<T>(tag, cid, aid, payload)
 }
 
 export const INIT_AGGREGATE_ID = 'INIT_AGGREGATE_ID'
 
-export const mkInitDomainEvent = <T>(
-  tag: string,
-  cid: string,
-  payload: T,
-): DomainEvent<T> => {
+export const mkInitDomainEvent = <T>(tag: string, cid: string, payload: T): DomainEvent<T> => {
   return new DomainEvent<T>(tag, cid, INIT_AGGREGATE_ID, payload)
 }
 
@@ -50,7 +41,7 @@ export const showDomainEvent = <T>(e: DomainEvent<T>): string => {
     payloadStr = '[unserializable]'
   }
 
-  return `${e.createdAt.toISOString()} :: ${e.commandId} :: ${e.aggregateId} :: ${e._tag.padEnd(12)} :: ${e.id} => ${payloadStr}`
+  return `${e.commandId} :: ${e.aggregateId} :: ${e._tag.padEnd(12)} :: ${e.id} => ${payloadStr} :: ${e.createdAt.toISOString()} `
 }
 
 export const domainEventToJSON = <T>(event: DomainEvent<T>) => ({
