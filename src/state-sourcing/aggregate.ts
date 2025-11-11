@@ -9,7 +9,7 @@ export abstract class AggregateRoot<TId = string> {
     this._events = []
   }
 
-  protected record(event: DomainEvent<any>): void {
+  record(event: DomainEvent<any>): void {
     this._events.push(event)
   }
 
@@ -27,4 +27,3 @@ export abstract class AggregateRoot<TId = string> {
     return this.id === other.id
   }
 }
-
