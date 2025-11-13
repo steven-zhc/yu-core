@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import {
   DomainError,
+  isDomainError,
   mkDomainError,
   toDomainError,
   showDomainError,
@@ -59,6 +60,26 @@ describe('DomainError', () => {
     })
   })
 
+  describe('metadataWithDef', () => {
+    it('returns metadata value when it exists', () => {
+      const error = new DomainError('Tagged', 'msg', { status: 503 })
+
+      expect(error.metadataWithDef('status', 200)).toBe(503)
+    })
+
+    it('falls back to default when key is missing', () => {
+      const error = new DomainError('Tagged', 'msg', { status: 503 })
+
+      expect(error.metadataWithDef('retry', false)).toBe(false)
+    })
+
+    it('falls back when stored value is undefined', () => {
+      const error = new DomainError('Tagged', 'msg', { optional: undefined })
+
+      expect(error.metadataWithDef('optional', 'fallback')).toBe('fallback')
+    })
+  })
+
   describe('mkDomainError', () => {
     it('creates an error using factory function', () => {
       const error = mkDomainError('TimeoutError', 'Request timed out')
@@ -72,6 +93,20 @@ describe('DomainError', () => {
       const error = mkDomainError('EmptyError', '')
 
       expect(error.message).toBe('')
+    })
+  })
+
+  describe('isDomainError', () => {
+    it('detects DomainError instances', () => {
+      const error = new DomainError('Detected', 'yup')
+
+      expect(isDomainError(error)).toBe(true)
+    })
+
+    it('rejects non DomainError values', () => {
+      expect(isDomainError(new Error('nope'))).toBe(false)
+      expect(isDomainError({ _tag: 'Detected' })).toBe(false)
+      expect(isDomainError(null)).toBe(false)
     })
   })
 
@@ -234,7 +269,7 @@ describe('DomainError', () => {
       expect(error.message).toBe('An error occurred')
     })
 
-    it('appends metadata to message', () => {
+    it('stores metadata on the error', () => {
       const def: ErrorDefinition = {
         tag: 'TimeoutError',
         defaultMessage: 'Request timed out',
@@ -246,12 +281,11 @@ describe('DomainError', () => {
 
       const error = mkDomainErrorFrom(def, metadata)
 
-      expect(error.message).toContain('Request timed out')
-      expect(error.message).toContain('ms [5000]')
-      expect(error.message).toContain('url [https://example.com]')
+      expect(error.message).toBe('Request timed out')
+      expect(error._metadata).toMatchObject(metadata)
     })
 
-    it('formats metadata with multiple fields', () => {
+    it('retains metadata with multiple fields', () => {
       const def: ErrorDefinition = {
         tag: 'ValidationError',
         defaultMessage: 'Invalid field',
@@ -264,9 +298,8 @@ describe('DomainError', () => {
 
       const error = mkDomainErrorFrom(def, metadata)
 
-      expect(error.message).toMatch(
-        /Invalid field - field \[email\] reason \[invalid format\] expected \[user@example.com\]/
-      )
+      expect(error.message).toBe('Invalid field')
+      expect(error._metadata).toMatchObject(metadata)
     })
 
     it('handles empty metadata object', () => {
@@ -291,7 +324,7 @@ describe('DomainError', () => {
       expect(error.message).toBe('Base message')
     })
 
-    it('stringifies non-primitive metadata values', () => {
+    it('preserves non-primitive metadata values', () => {
       const def: ErrorDefinition = {
         tag: 'Error',
         defaultMessage: 'Error occurred',
@@ -304,9 +337,8 @@ describe('DomainError', () => {
 
       const error = mkDomainErrorFrom(def, metadata)
 
-      expect(error.message).toContain('count [42]')
-      expect(error.message).toContain('enabled [true]')
-      expect(error.message).toContain('data [')
+      expect(error.message).toBe('Error occurred')
+      expect(error._metadata).toMatchObject(metadata)
     })
 
     it('works with error constants pattern', () => {
@@ -320,9 +352,9 @@ describe('DomainError', () => {
       const error2 = mkDomainErrorFrom(NetworkErrors.FetchError, { url: 'https://example.com' })
 
       expect(error1._tag).toBe('TimeoutError')
-      expect(error1.message).toContain('5000')
+      expect(error1._metadata).toMatchObject({ ms: 5000 })
       expect(error2._tag).toBe('FetchError')
-      expect(error2.message).toContain('https://example.com')
+      expect(error2._metadata).toMatchObject({ url: 'https://example.com' })
     })
   })
 

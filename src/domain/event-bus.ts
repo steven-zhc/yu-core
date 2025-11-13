@@ -73,7 +73,7 @@ export class EmitteryEventBus implements EventBus {
   private readonly handlerMap: WeakMap<EventHandler, (event: DomainEvent<any>) => Promise<void>>
   private readonly errorHandlerMap: WeakMap<ErrorHandler, (err: EventBusErrorEvent) => Promise<void>>
 
-  private static readonly ERROR_EVENT = '__eventBusError__'
+  private static readonly ERROR_EVENT = '__event_bus_error__'
 
   constructor() {
     this.emitter = new Emittery()
