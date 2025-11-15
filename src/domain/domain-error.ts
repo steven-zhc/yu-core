@@ -42,14 +42,24 @@ export const mkDomainError = (tag: string, message: string, metadata?: ErrorMeta
  */
 export interface ErrorDefinition {
   tag: string
-  defaultMessage?: string
+  defaultMessage: string
 }
+
+/**
+ * Create a DomainError from a definition while overriding the message.
+ * Falls back to the definition's default message when none is provided.
+ */
+export const mkDomainErrorWithReason = (
+  def: ErrorDefinition,
+  message?: string,
+  metadata?: ErrorMetadata
+): DomainError => mkDomainError(def.tag, message ?? def.defaultMessage, metadata)
 
 /**
  * Create a DomainError from a shared ErrorDefinition with optional overrides.
  */
 export const mkDomainErrorFrom = (def: ErrorDefinition, metadata?: ErrorMetadata): DomainError =>
-  mkDomainError(def.tag, def.defaultMessage ?? 'An error occurred', metadata)
+  mkDomainError(def.tag, def.defaultMessage, metadata)
 
 export const toDomainError =
   (tag: string) =>
