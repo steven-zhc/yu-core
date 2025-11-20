@@ -261,6 +261,7 @@ describe('DomainError', () => {
     it('uses fallback message when no default provided', () => {
       const def: ErrorDefinition = {
         tag: 'GenericError',
+        defaultMessage: 'An error occurred',
       }
 
       const error = mkDomainErrorFrom(def)
@@ -362,10 +363,11 @@ describe('DomainError', () => {
     it('accepts minimal definition', () => {
       const def: ErrorDefinition = {
         tag: 'MinimalError',
+        defaultMessage: 'Minimal error',
       }
 
       expect(def.tag).toBe('MinimalError')
-      expect(def.defaultMessage).toBeUndefined()
+      expect(def.defaultMessage).toBe('Minimal error')
     })
 
     it('accepts full definition', () => {
