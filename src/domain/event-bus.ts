@@ -5,6 +5,8 @@
 
 import Emittery from 'emittery'
 import { type DomainEvent, showDomainEvent } from './domain-event.js'
+import { toDomainErrorWithDef, toDomainError, mapToDomainError, DomainError, showDomainError } from './domain-error.js'
+import { EventBusError } from './common-error.js'
 
 /**
  * Event handler function type.
@@ -14,15 +16,16 @@ export type EventHandler<T = any> = (event: DomainEvent<T>) => void | Promise<vo
 
 /** Error payload delivered on the error channel */
 export interface EventBusErrorEvent {
-  eventTag: string
-  event: DomainEvent<any>
-  error: unknown
+  eventTag: string         // Original DomainEvent's tag (e.g., 'JobImported', 'ResumeGenerationQueued')
+  errorTag: string         // DomainError's tag (e.g., 'LLMError', 'HallucinationDetectedError')
+  event: DomainEvent<any>  // Original event that was being processed
+  error: DomainError       // Error that was thrown
 }
 
 export const showEventBusError = (errorEvent: EventBusErrorEvent): string =>
-  `${showDomainEvent(errorEvent.event)} :: ${JSON.stringify(errorEvent.error)}`
+  `${showDomainEvent(errorEvent.event)} :: ${showDomainError(errorEvent.error)}`
 
-export type ErrorHandler = (err: EventBusErrorEvent) => void | Promise<void>
+export type ErrorHandler = (errorEvent: EventBusErrorEvent) => void | Promise<void>
 
 /**
  * Abstract EventBus interface for publishing and subscribing to domain events.
@@ -56,11 +59,23 @@ export interface EventBus {
    */
   readonly unsubscribeAll: (handler: EventHandler) => void
 
-  /** Subscribe to handler errors emitted on the error channel */
+  /** Subscribe to ALL handler errors emitted on the error channel */
   readonly subscribeErrors: (handler: ErrorHandler) => void
 
   /** Unsubscribe an error handler from the error channel */
   readonly unsubscribeErrors: (handler: ErrorHandler) => void
+
+  /** Subscribe to errors by DomainError tag (error type) - handles specific error types across all events */
+  readonly subscribeErrorsByErrorTag: (errorTag: string, handler: ErrorHandler) => void
+
+  /** Unsubscribe an error handler for a specific error tag */
+  readonly unsubscribeErrorsByErrorTag: (errorTag: string, handler: ErrorHandler) => void
+
+  /** Subscribe to errors by DomainEvent tag (business event) - handles all errors from specific event handlers */
+  readonly subscribeErrorsByEventTag: (eventTag: string, handler: ErrorHandler) => void
+
+  /** Unsubscribe an error handler for a specific event tag */
+  readonly unsubscribeErrorsByEventTag: (eventTag: string, handler: ErrorHandler) => void
 }
 
 /**
@@ -72,13 +87,19 @@ export class EmitteryEventBus implements EventBus {
   // Map handlers to wrapped handlers for unsubscription
   private readonly handlerMap: WeakMap<EventHandler, (event: DomainEvent<any>) => Promise<void>>
   private readonly errorHandlerMap: WeakMap<ErrorHandler, (err: EventBusErrorEvent) => Promise<void>>
+  // Map filtered error handlers by error tag: handler -> Map<errorTag, wrappedHandler>
+  private readonly filteredByErrorTagMap: WeakMap<ErrorHandler, Map<string, (err: EventBusErrorEvent) => Promise<void>>>
+  // Map filtered error handlers by event tag: handler -> Map<eventTag, wrappedHandler>
+  private readonly filteredByEventTagMap: WeakMap<ErrorHandler, Map<string, (err: EventBusErrorEvent) => Promise<void>>>
 
-  private static readonly ERROR_EVENT = '__event_bus_error__'
+  private static readonly ERROR_EVENT = '__error_event__'
 
   constructor() {
     this.emitter = new Emittery()
     this.handlerMap = new WeakMap()
     this.errorHandlerMap = new WeakMap()
+    this.filteredByErrorTagMap = new WeakMap()
+    this.filteredByEventTagMap = new WeakMap()
   }
 
   async publish<T>(event: DomainEvent<T>): Promise<void> {
@@ -91,10 +112,12 @@ export class EmitteryEventBus implements EventBus {
       try {
         await handler(event)
       } catch (error) {
+        const domainError = mapToDomainError(EventBusError.UnknownError.tag)(error)
         await this.emitter.emit(EmitteryEventBus.ERROR_EVENT, {
-          eventTag,
+          eventTag: eventTag,              // Original business event tag
+          errorTag: domainError._tag,      // Error type tag
           event: event as unknown as DomainEvent<any>,
-          error,
+          error: domainError,
         } satisfies EventBusErrorEvent)
       }
     }
@@ -119,10 +142,12 @@ export class EmitteryEventBus implements EventBus {
       try {
         await handler(event)
       } catch (error) {
+        const domainError = mapToDomainError(EventBusError.UnknownError.tag)(error)
         await this.emitter.emit(EmitteryEventBus.ERROR_EVENT, {
-          eventTag: String(eventName),
+          eventTag: String(eventName),     // Original business event tag
+          errorTag: domainError._tag,      // Error type tag
           event,
-          error,
+          error: domainError,
         } satisfies EventBusErrorEvent)
       }
     }
@@ -142,8 +167,8 @@ export class EmitteryEventBus implements EventBus {
   }
 
   subscribeErrors(handler: ErrorHandler): void {
-    const wrapped = async (err: EventBusErrorEvent) => {
-      await handler(err)
+    const wrapped = async (errorEvent: EventBusErrorEvent) => {
+      await handler(errorEvent)
     }
     this.errorHandlerMap.set(handler, wrapped)
     this.emitter.on(EmitteryEventBus.ERROR_EVENT, wrapped)
@@ -153,6 +178,86 @@ export class EmitteryEventBus implements EventBus {
     const wrapped = this.errorHandlerMap.get(handler)
     if (wrapped) {
       this.emitter.off(EmitteryEventBus.ERROR_EVENT, wrapped)
+    }
+  }
+
+  subscribeErrorsByErrorTag(errorTag: string, handler: ErrorHandler): void {
+    // Wrap handler to filter by error tag (DomainError type)
+    const wrapped = async (errorEvent: EventBusErrorEvent) => {
+      if (errorEvent.errorTag === errorTag) {
+        await handler(errorEvent)
+      }
+    }
+
+    // Get or create the map for this handler
+    let tagMap = this.filteredByErrorTagMap.get(handler)
+    if (!tagMap) {
+      tagMap = new Map()
+      this.filteredByErrorTagMap.set(handler, tagMap)
+    }
+
+    // Store the wrapped handler for this error tag
+    tagMap.set(errorTag, wrapped)
+
+    // Subscribe to the error channel
+    this.emitter.on(EmitteryEventBus.ERROR_EVENT, wrapped)
+  }
+
+  unsubscribeErrorsByErrorTag(errorTag: string, handler: ErrorHandler): void {
+    const tagMap = this.filteredByErrorTagMap.get(handler)
+    if (!tagMap) {
+      return
+    }
+
+    const wrapped = tagMap.get(errorTag)
+    if (wrapped) {
+      this.emitter.off(EmitteryEventBus.ERROR_EVENT, wrapped)
+      tagMap.delete(errorTag)
+
+      // Clean up the map if empty
+      if (tagMap.size === 0) {
+        this.filteredByErrorTagMap.delete(handler)
+      }
+    }
+  }
+
+  subscribeErrorsByEventTag(eventTag: string, handler: ErrorHandler): void {
+    // Wrap handler to filter by event tag (business event type)
+    const wrapped = async (errorEvent: EventBusErrorEvent) => {
+      if (errorEvent.eventTag === eventTag) {
+        await handler(errorEvent)
+      }
+    }
+
+    // Get or create the map for this handler
+    let tagMap = this.filteredByEventTagMap.get(handler)
+    if (!tagMap) {
+      tagMap = new Map()
+      this.filteredByEventTagMap.set(handler, tagMap)
+    }
+
+    // Store the wrapped handler for this event tag
+    tagMap.set(eventTag, wrapped)
+
+    // Subscribe to the error channel
+    this.emitter.on(EmitteryEventBus.ERROR_EVENT, wrapped)
+  }
+
+  unsubscribeErrorsByEventTag(eventTag: string, handler: ErrorHandler): void {
+    const tagMap = this.filteredByEventTagMap.get(handler)
+    if (!tagMap) {
+      return
+    }
+
+    const wrapped = tagMap.get(eventTag)
+    if (wrapped) {
+      this.emitter.off(EmitteryEventBus.ERROR_EVENT, wrapped)
+      tagMap.delete(eventTag)
+
+      // Clean up the map if empty
+      if (tagMap.size === 0) {
+        this.filteredByEventTagMap.delete(handler)
+      }
     }
   }
 }

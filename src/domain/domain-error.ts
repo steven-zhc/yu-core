@@ -68,8 +68,10 @@ export const toDomainError =
       return mkDomainError(tag, err)
     }
     if (err instanceof DomainError) {
-      // If it's already a DomainError, keep its message but change tag
-      return mkDomainError(tag, err.message, err._metadata)
+      // If it's already a DomainError, keep its message but change tag and track the prior tag
+      const existingTraceTags = err._metadata?.trace_tags
+      const trace_tags = Array.isArray(existingTraceTags) ? [...existingTraceTags, err._tag] : [err._tag]
+      return mkDomainError(tag, err.message, { ...err._metadata, trace_tags })
     }
     if (err instanceof Error) {
       // Convert vanilla Error to DomainError with new tag, use Error.message
@@ -81,6 +83,34 @@ export const toDomainError =
     } catch {
       return mkDomainError(tag, String(err))
     }
+  }
+
+export const toDomainErrorWithDef =
+  (def: ErrorDefinition, metadata?: ErrorMetadata) =>
+  (error: unknown): DomainError => {
+    const e = toDomainError(def.tag)(error)
+    const suffix = ' << ' + def.defaultMessage
+    return mkDomainError(def.tag, e.message + suffix, { ...e._metadata, ...metadata })
+  }
+
+// compare to toDomainError, mapToDomainError will not change or wrap error if err is DomainError.
+export const mapToDomainError =
+  (tag: string) =>
+  (err: unknown): DomainError => {
+    if (err instanceof DomainError) {
+      return err
+    }
+    return toDomainError(tag)(err)
+  }
+
+// compare to toDomainErrorWithDef, mapToDomainError will not change or wrap error if err is DomainError.
+export const mapToDomainErrorWithDef =
+  (def: ErrorDefinition, metadata?: ErrorMetadata) =>
+  (error: unknown): DomainError => {
+    if (error instanceof DomainError) {
+      return error
+    }
+    return toDomainErrorWithDef(def, metadata)(error)
   }
 
 export const showDomainError = <T>(error: DomainError): string => {
@@ -107,11 +137,3 @@ export const domainErrorToJSON = (error: DomainError) => {
     metadata: { ...error._metadata },
   }
 }
-
-export const mapToDomainError =
-  (def: ErrorDefinition, metadata?: ErrorMetadata) =>
-  (error: unknown): DomainError => {
-    const e = toDomainError(def.tag)(error)
-    const suffix = def.defaultMessage ? ' << ' + def.defaultMessage : ''
-    return mkDomainError(def.tag, e.message + suffix, { ...e._metadata, ...metadata })
-  }

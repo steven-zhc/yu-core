@@ -39,7 +39,8 @@ describe('EmitteryEventBus', () => {
 
     await bus.publish(mkEvent(TAG_A, { n: 1 }))
     expect(okCalled).toBe(true)
-    expect(errorSeen?.eventTag).toBe(TAG_A)
+    expect(errorSeen?.eventTag).toBe(TAG_A)  // Business event tag
+    expect(errorSeen?.errorTag).toBeDefined()  // Error type tag
     expect(errorSeen?.error).toBeInstanceOf(Error)
   })
 
@@ -93,7 +94,8 @@ describe('EmitteryEventBus', () => {
     bus.subscribeAll(wildcard)
     await bus.publish(mkEvent(TAG_A, { x: 1 }))
 
-    expect(errorSeen?.eventTag).toBe(TAG_A)
+    expect(errorSeen?.eventTag).toBe(TAG_A)  // Business event tag
+    expect(errorSeen?.errorTag).toBeDefined()  // Error type tag
     expect(errorSeen?.error).toBeInstanceOf(Error)
 
     bus.unsubscribeAll(wildcard)
@@ -108,6 +110,97 @@ describe('EmitteryEventBus', () => {
     }
     bus.subscribeErrors(errHandler)
     bus.unsubscribeErrors(errHandler)
+
+    bus.subscribe(TAG_A, () => {
+      throw new Error('will not be observed')
+    })
+    await bus.publish(mkEvent(TAG_A, { n: 42 }))
+
+    expect(count).toBe(0)
+  })
+
+  it('subscribeErrorsByEventTag only receives errors from specific business event', async () => {
+    const bus: EventBus = createEventBus()
+
+    const receivedErrors: EventBusErrorEvent[] = []
+    bus.subscribeErrorsByEventTag(TAG_A, (e) => {
+      receivedErrors.push(e)
+    })
+
+    // Subscribe handlers that throw for both TAG_A and TAG_B
+    bus.subscribe(TAG_A, () => {
+      throw new Error('error-a')
+    })
+    bus.subscribe(TAG_B, () => {
+      throw new Error('error-b')
+    })
+
+    await bus.publish(mkEvent(TAG_A, { n: 1 }))
+    await bus.publish(mkEvent(TAG_B, { n: 2 }))
+
+    // Should only receive error from TAG_A business event
+    expect(receivedErrors).toHaveLength(1)
+    expect(receivedErrors[0].eventTag).toBe(TAG_A)
+  })
+
+  it('unsubscribeErrorsByEventTag stops receiving errors for specific event tag', async () => {
+    const bus: EventBus = createEventBus()
+
+    let count = 0
+    const errHandler = () => {
+      count += 1
+    }
+
+    bus.subscribeErrorsByEventTag(TAG_A, errHandler)
+    bus.unsubscribeErrorsByEventTag(TAG_A, errHandler)
+
+    bus.subscribe(TAG_A, () => {
+      throw new Error('will not be observed')
+    })
+    await bus.publish(mkEvent(TAG_A, { n: 42 }))
+
+    expect(count).toBe(0)
+  })
+
+  it('subscribeErrorsByErrorTag only receives errors of specific error type', async () => {
+    const bus: EventBus = createEventBus()
+
+    const receivedErrors: EventBusErrorEvent[] = []
+    const TARGET_ERROR_TAG = 'UnknownError'
+
+    bus.subscribeErrorsByErrorTag(TARGET_ERROR_TAG, (e) => {
+      receivedErrors.push(e)
+    })
+
+    // Both handlers throw (will be converted to UnknownError)
+    bus.subscribe(TAG_A, () => {
+      throw new Error('error-a')
+    })
+    bus.subscribe(TAG_B, () => {
+      throw new Error('error-b')
+    })
+
+    await bus.publish(mkEvent(TAG_A, { n: 1 }))
+    await bus.publish(mkEvent(TAG_B, { n: 2 }))
+
+    // Should receive errors from both events since they're the same error type
+    expect(receivedErrors).toHaveLength(2)
+    expect(receivedErrors[0].errorTag).toBe(TARGET_ERROR_TAG)
+    expect(receivedErrors[1].errorTag).toBe(TARGET_ERROR_TAG)
+    expect(receivedErrors[0].eventTag).toBe(TAG_A)
+    expect(receivedErrors[1].eventTag).toBe(TAG_B)
+  })
+
+  it('unsubscribeErrorsByErrorTag stops receiving errors for specific error type', async () => {
+    const bus: EventBus = createEventBus()
+
+    let count = 0
+    const errHandler = () => {
+      count += 1
+    }
+
+    bus.subscribeErrorsByErrorTag('UnknownError', errHandler)
+    bus.unsubscribeErrorsByErrorTag('UnknownError', errHandler)
 
     bus.subscribe(TAG_A, () => {
       throw new Error('will not be observed')
