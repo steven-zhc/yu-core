@@ -1,4 +1,4 @@
-import { DomainEvent } from '../domain/domain-event.js'
+import { DomainEvent } from '../domain/index.js'
 
 export abstract class AggregateRoot<TId = string> {
   readonly id: TId
