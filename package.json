@@ -48,6 +48,18 @@
     "./event-sourcing": {
       "types": "./dist/event-sourcing/index.d.ts",
       "default": "./dist/event-sourcing/index.js"
+    },
+    "./data": {
+      "types": "./dist/data/index.d.ts",
+      "default": "./dist/data/index.js"
+    },
+    "./data/patch": {
+      "types": "./dist/data/patch.d.ts",
+      "default": "./dist/data/patch.js"
+    },
+    "./data/typeclass": {
+      "types": "./dist/data/typeclass.d.ts",
+      "default": "./dist/data/typeclass.js"
     }
   },
   "typesVersions": {

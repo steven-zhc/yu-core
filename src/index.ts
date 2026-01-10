@@ -1,5 +1,4 @@
 export * from './domain/index.js'
 export * from './state-sourcing/index.js'
 export * from './event-sourcing/index.js'
-export * from './data/patch.js'
-export * from './data/traversable.js'
+export * from './data/index.js'

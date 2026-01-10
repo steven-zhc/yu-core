@@ -5,6 +5,28 @@
  */
 
 /**
+ * Skip - Leave the field unchanged
+ */
+export type Skip = {
+  readonly _tag: 'Skip'
+}
+
+/**
+ * Set<T> - Update the field to a new value
+ */
+export type Set<T> = {
+  readonly _tag: 'Set'
+  readonly value: T
+}
+
+/**
+ * Clear - Clear/wipe/empty the field
+ */
+export type Clear = {
+  readonly _tag: 'Clear'
+}
+
+/**
  * Patch<T> - Represents three states for field updates in PATCH operations
  *
  * States:
@@ -43,28 +65,6 @@
  * ```
  */
 export type Patch<T> = Skip | Set<T> | Clear
-
-/**
- * Skip - Leave the field unchanged
- */
-export type Skip = {
-  readonly _tag: 'Skip'
-}
-
-/**
- * Set<T> - Update the field to a new value
- */
-export type Set<T> = {
-  readonly _tag: 'Set'
-  readonly value: T
-}
-
-/**
- * Clear - Clear/wipe/empty the field
- */
-export type Clear = {
-  readonly _tag: 'Clear'
-}
 
 /**
  * Constructor: Create a Skip update (leave field unchanged)
@@ -133,12 +133,12 @@ export const applyPatch = <T>(update: Patch<T> | undefined, current: T | undefin
  *
  * @example
  * ```typescript
- * fromOptional(undefined)  // skip()
- * fromOptional(null)       // clear()
- * fromOptional('hello')    // set('hello')
+ * of(undefined)  // skip()
+ * of(null)       // clear()
+ * of('hello')    // set('hello')
  * ```
  */
-export const fromOptional = <T>(value: T | null | undefined): Patch<T> => {
+export const of = <T>(value: T | null | undefined): Patch<T> => {
   if (value === undefined) return skip()
   if (value === null) return clear()
   return set(value)
@@ -170,12 +170,12 @@ export const toOptional = <T>(update: Patch<T>): T | null | undefined => {
  *
  * @example
  * ```typescript
- * mapPatch(set(5), x => x * 2)     // set(10)
- * mapPatch(skip(), x => x * 2)     // skip()
- * mapPatch(clear(), x => x * 2)    // clear()
+ * map(x => x * 2)(set(5))     // set(10)
+ * map(x => x * 2)(skip())     // skip()
+ * map(x => x * 2)(clear())    // clear()
  * ```
  */
-export const mapPatch =
+export const map =
   <T, U>(f: (value: T) => U) =>
   (update: Patch<T>): Patch<U> => {
     if (isSet(update)) {
@@ -192,9 +192,9 @@ export const mapPatch =
  *
  * @example
  * ```typescript
- * getOrElse(set('hello'), 'default')   // 'hello'
- * getOrElse(skip(), 'default')         // 'default'
- * getOrElse(clear(), 'default')        // 'default'
+ * getOrElse('default')(set('hello'))   // 'hello'
+ * getOrElse('default')(skip())         // 'default'
+ * getOrElse('default')(clear())        // 'default'
  * ```
  */
 export const getOrElse =
@@ -202,3 +202,41 @@ export const getOrElse =
   (update: Patch<T>): T => {
     return isSet(update) ? update.value : defaultValue
   }
+
+/**
+ * Traversable instance for Patch
+ *
+ * Allows generic traverse operations on Patch values using any Applicative functor.
+ * This emulates Haskell's Traversable typeclass in TypeScript.
+ *
+ * Works with any Applicative (Effect, Option, Array, etc.) - not hardcoded to Effect!
+ *
+ * @example
+ * ```typescript
+ * import { traverse, EffectApplicative } from '@yu/core/traversable'
+ * import { PatchTraversable } from '@yu/core'
+ * import { pipe } from 'effect/Function'
+ *
+ * // Generic traverse with Applicative witness:
+ * yield* pipe(
+ *   patch,
+ *   traverse(PatchTraversable, EffectApplicative)(UrlValue.from)
+ * )
+ * ```
+ */
+export const PatchTraversable = {
+  traverse:
+    <A, B>(applicative: any) =>
+    (f: (value: A) => any) =>
+    (patch: Patch<A>): any => {
+      // Use the provided Applicative's operations (pure and map)
+      switch (patch._tag) {
+        case 'Skip':
+          return applicative.pure(skip()) // pure :: a -> f a
+        case 'Clear':
+          return applicative.pure(clear()) // pure :: a -> f a
+        case 'Set':
+          return applicative.map(f(patch.value), (result: B) => set(result)) // fmap :: (a -> b) -> f a -> f b
+      }
+    },
+}
