@@ -14,6 +14,7 @@ export {
   isSkip,
   isSet,
   isClear,
+  match,
   applyPatch,
   of,
   toOptional,

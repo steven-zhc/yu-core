@@ -97,6 +97,41 @@ export const isSet = <T>(update: Patch<T>): update is Set<T> => update._tag === 
 export const isClear = <T>(update: Patch<T>): update is Clear => update._tag === 'Clear'
 
 /**
+ * Type guard: Check if update is Set or Clear
+ */
+export const isUpdate = <T>(update: Patch<T>): update is Set<T> | Clear => isSet(update) || isClear(update)
+
+/**
+ * Pattern match on a Patch value
+ *
+ * @param handlers - Object with handlers for each case
+ * @returns A function that takes a Patch and returns the result
+ *
+ * @example
+ * ```typescript
+ * const patch = set('hello')
+ * const result = match({
+ *   onSkip: () => 'no change',
+ *   onSet: (value) => `set to ${value}`,
+ *   onClear: () => 'cleared'
+ * })(patch)
+ * // result: 'set to hello'
+ * ```
+ */
+export const match =
+  <T, R>(handlers: { onSkip: () => R; onSet: (value: T) => R; onClear: () => R }) =>
+  (patch: Patch<T>): R => {
+    switch (patch._tag) {
+      case 'Skip':
+        return handlers.onSkip()
+      case 'Set':
+        return handlers.onSet(patch.value)
+      case 'Clear':
+        return handlers.onClear()
+    }
+  }
+
+/**
  * Apply a Patch to a current value
  *
  * @param update - The update to apply
@@ -110,7 +145,7 @@ export const isClear = <T>(update: Patch<T>): update is Clear => update._tag ===
  * applyPatch(clear(), 'current')       // undefined
  * ```
  */
-export const applyPatch = <T>(update: Patch<T> | undefined, current: T | undefined): T | undefined => {
+export const applyPatch = <T>(update: Patch<T> | undefined, current: T | undefined): T | null => {
   if (!update) return current
 
   switch (update._tag) {
@@ -119,7 +154,7 @@ export const applyPatch = <T>(update: Patch<T> | undefined, current: T | undefin
     case 'Set':
       return update.value
     case 'Clear':
-      return undefined
+      return null
   }
 }
 
