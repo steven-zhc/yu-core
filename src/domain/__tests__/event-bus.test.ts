@@ -6,7 +6,7 @@ const TAG_A = 'TestEventA'
 const TAG_B = 'TestEventB'
 
 const mkEvent = <T>(tag: string, payload: T): DomainEvent<T> =>
-  mkDomainEvent(tag, 'cmd-1', 'agg-1', payload)
+  mkDomainEvent(tag, 'user-1', 'cmd-1', 'agg-1', payload)
 
 describe('EmitteryEventBus', () => {
   it('publishes to subscribed handler', async () => {

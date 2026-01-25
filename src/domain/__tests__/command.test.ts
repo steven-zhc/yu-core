@@ -7,11 +7,12 @@ describe('Command', () => {
   })
 
   describe('constructor', () => {
-    it('creates a command with tag and payload', () => {
-      const payload = { userId: '123', action: 'create' }
-      const cmd = new Command('CreateUser', payload)
+    it('creates a command with tag, userId and payload', () => {
+      const payload = { action: 'create' }
+      const cmd = new Command('CreateUser', 'user-123', payload)
 
       expect(cmd._tag).toBe('CreateUser')
+      expect(cmd.userId).toBe('user-123')
       expect(cmd.payload).toEqual(payload)
       expect(cmd.id).toBeDefined()
       expect(cmd.id.length).toBeGreaterThan(0)
@@ -19,15 +20,15 @@ describe('Command', () => {
     })
 
     it('generates unique IDs for different commands', () => {
-      const cmd1 = new Command('TestCommand', { foo: 1 })
-      const cmd2 = new Command('TestCommand', { foo: 1 })
+      const cmd1 = new Command('TestCommand', 'user-1', { foo: 1 })
+      const cmd2 = new Command('TestCommand', 'user-1', { foo: 1 })
 
       expect(cmd1.id).not.toBe(cmd2.id)
     })
 
     it('preserves payload reference', () => {
       const payload = { nested: { value: 42 } }
-      const cmd = new Command('Test', payload)
+      const cmd = new Command('Test', 'user-1', payload)
 
       expect(cmd.payload).toBe(payload)
     })
@@ -35,19 +36,19 @@ describe('Command', () => {
 
   describe('is', () => {
     it('returns true when tag matches', () => {
-      const cmd = new Command('CreateUser', {})
+      const cmd = new Command('CreateUser', 'user-1', {})
 
       expect(cmd.is('CreateUser')).toBe(true)
     })
 
     it('returns false when tag does not match', () => {
-      const cmd = new Command('CreateUser', {})
+      const cmd = new Command('CreateUser', 'user-1', {})
 
       expect(cmd.is('DeleteUser')).toBe(false)
     })
 
     it('is case-sensitive', () => {
-      const cmd = new Command('CreateUser', {})
+      const cmd = new Command('CreateUser', 'user-1', {})
 
       expect(cmd.is('createuser')).toBe(false)
       expect(cmd.is('CREATEUSER')).toBe(false)
@@ -57,18 +58,19 @@ describe('Command', () => {
   describe('mkCommand', () => {
     it('creates a command using factory function', () => {
       const payload = { name: 'Alice' }
-      const cmd = mkCommand('CreateUser', payload)
+      const cmd = mkCommand('CreateUser', 'user-123', payload)
 
       expect(cmd).toBeInstanceOf(Command)
       expect(cmd._tag).toBe('CreateUser')
+      expect(cmd.userId).toBe('user-123')
       expect(cmd.payload).toEqual(payload)
     })
 
     it('handles different payload types', () => {
-      const stringCmd = mkCommand('StringCmd', 'text')
-      const numberCmd = mkCommand('NumberCmd', 42)
-      const arrayCmd = mkCommand('ArrayCmd', [1, 2, 3])
-      const nullCmd = mkCommand('NullCmd', null)
+      const stringCmd = mkCommand('StringCmd', 'user-1', 'text')
+      const numberCmd = mkCommand('NumberCmd', 'user-1', 42)
+      const arrayCmd = mkCommand('ArrayCmd', 'user-1', [1, 2, 3])
+      const nullCmd = mkCommand('NullCmd', 'user-1', null)
 
       expect(stringCmd.payload).toBe('text')
       expect(numberCmd.payload).toBe(42)
@@ -78,42 +80,47 @@ describe('Command', () => {
   })
 
   describe('showCommand', () => {
-    it('formats command with serializable payload', () => {
+    it('formats command with serializable payload and userId', () => {
       const now = new Date('2024-01-01T12:00:00.000Z')
       vi.setSystemTime(now)
 
-      const cmd = new Command('CreateUser', { userId: '123' })
+      const cmd = new Command('CreateUser', 'user-123', { name: 'Alice' })
       const output = showCommand(cmd)
 
-      expect(output).toContain('2024-01-01T12:00:00.000Z')
+      // Format: [timestamp] tag | cmd=id usr=userId | payload
+      expect(output).toContain('[2024-01-01T12:00:00.000Z]')
       expect(output).toContain('CreateUser')
-      expect(output).toContain(cmd.id)
-      expect(output).toContain('{"userId":"123"}')
+      expect(output).toContain(`cmd=${cmd.id}`)
+      expect(output).toContain('usr=user-123')
+      expect(output).toContain('{"name":"Alice"}')
     })
 
     it('handles unserializable payload', () => {
       const circular: any = {}
       circular.self = circular
 
-      const cmd = new Command('TestCmd', circular)
+      const cmd = new Command('TestCmd', 'user-1', circular)
       const output = showCommand(cmd)
 
       expect(output).toContain('[unserializable]')
       expect(output).toContain('TestCmd')
     })
 
-    it('pads tag to 12 characters', () => {
-      const cmd = new Command('Short', {})
+    it('uses pipe separators for structured format', () => {
+      const cmd = new Command('TestCmd', 'user-1', { foo: 'bar' })
       const output = showCommand(cmd)
 
-      // Tag should be padded: "Short       "
-      const lines = output.split(' :: ')
-      expect(lines[1]).toMatch(/^Short\s+$/)
-      expect(lines[1].length).toBe(12)
+      // Format: [timestamp] tag | cmd=id usr=userId | payload
+      const parts = output.split(' | ')
+      expect(parts.length).toBe(3)
+      expect(parts[0]).toMatch(/^\[.+\] TestCmd$/)
+      expect(parts[1]).toContain('cmd=')
+      expect(parts[1]).toContain('usr=')
+      expect(parts[2]).toBe('{"foo":"bar"}')
     })
 
     it('handles empty payload', () => {
-      const cmd = new Command('EmptyCmd', {})
+      const cmd = new Command('EmptyCmd', 'user-1', {})
       const output = showCommand(cmd)
 
       expect(output).toContain('{}')
@@ -121,18 +128,19 @@ describe('Command', () => {
   })
 
   describe('cmdToJSON', () => {
-    it('converts command to JSON-serializable object', () => {
+    it('converts command to JSON-serializable object with userId', () => {
       const now = new Date('2024-01-01T12:00:00.000Z')
       vi.setSystemTime(now)
 
-      const cmd = new Command('CreateUser', { userId: '123' })
+      const cmd = new Command('CreateUser', 'user-123', { name: 'Alice' })
       const json = cmdToJSON(cmd)
 
       expect(json).toEqual({
         _tag: 'CreateUser',
         id: cmd.id,
+        userId: 'user-123',
         createdAt: '2024-01-01T12:00:00.000Z',
-        payload: { userId: '123' },
+        payload: { name: 'Alice' },
       })
     })
 
@@ -143,14 +151,14 @@ describe('Command', () => {
           bool: true,
         },
       }
-      const cmd = new Command('ComplexCmd', payload)
+      const cmd = new Command('ComplexCmd', 'user-1', payload)
       const json = cmdToJSON(cmd)
 
       expect(json.payload).toEqual(payload)
     })
 
     it('converts date to ISO string', () => {
-      const cmd = new Command('Test', {})
+      const cmd = new Command('Test', 'user-1', {})
       const json = cmdToJSON(cmd)
 
       expect(typeof json.createdAt).toBe('string')
