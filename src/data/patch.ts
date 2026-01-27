@@ -145,7 +145,7 @@ export const match =
  * applyPatch(clear(), 'current')       // undefined
  * ```
  */
-export const applyPatch = <T>(update: Patch<T> | undefined, current: T | undefined): T | null => {
+export const applyPatch = <T>(update: Patch<T> | undefined, current: T | undefined): T | null | undefined => {
   if (!update) return current
 
   switch (update._tag) {
