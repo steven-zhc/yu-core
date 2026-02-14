@@ -144,6 +144,18 @@ export const domainEventToJSON = <T>(event: DomainEvent<T>) => ({
   payload: event.payload,
 })
 
+/**
+ * Helper type for defining domain event companion types.
+ * Eliminates self-referencing indexed access in event type definitions.
+ *
+ * @example
+ * ```typescript
+ * export type MyEvent = EventDef<{ id: string }>
+ * // equivalent to: { Payload: { id: string }; Event: DomainEvent<{ id: string }> }
+ * ```
+ */
+export type EventDef<P> = { Payload: P; Event: DomainEvent<P> }
+
 type DomainEventMatcherInput<TReturn> = Record<string, (event: DomainEvent<any>) => TReturn>
 
 export const matchDomainEvent = <TReturn>(

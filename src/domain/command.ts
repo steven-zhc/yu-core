@@ -23,6 +23,18 @@ export class Command<TPayload> {
 export const mkCommand = <T>(tag: string, userId: string, payload: T): Command<T> =>
   new Command(tag, userId, payload)
 
+/**
+ * Helper type for defining command companion types.
+ * Eliminates self-referencing indexed access in command type definitions.
+ *
+ * @example
+ * ```typescript
+ * export type MyCommand = CommandDef<{ name: string }>
+ * // equivalent to: { Payload: { name: string }; Cmd: Command<{ name: string }> }
+ * ```
+ */
+export type CommandDef<P> = { Payload: P; Cmd: Command<P> }
+
 export const showCommand = <T>(command: Command<T>): string => {
   let payloadStr = ''
   try {

@@ -166,7 +166,7 @@ describe('EmitteryEventBus', () => {
     const bus: EventBus = createEventBus()
 
     const receivedErrors: EventBusErrorEvent[] = []
-    const TARGET_ERROR_TAG = 'UnknownError'
+    const TARGET_ERROR_TAG = 'unknown-event-bus-error'
 
     bus.subscribeErrorsByErrorTag(TARGET_ERROR_TAG, (e) => {
       receivedErrors.push(e)
@@ -199,8 +199,8 @@ describe('EmitteryEventBus', () => {
       count += 1
     }
 
-    bus.subscribeErrorsByErrorTag('UnknownError', errHandler)
-    bus.unsubscribeErrorsByErrorTag('UnknownError', errHandler)
+    bus.subscribeErrorsByErrorTag('unknown-event-bus-error', errHandler)
+    bus.unsubscribeErrorsByErrorTag('unknown-event-bus-error', errHandler)
 
     bus.subscribe(TAG_A, () => {
       throw new Error('will not be observed')

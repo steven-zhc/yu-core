@@ -139,6 +139,10 @@ export class EmitteryEventBus implements EventBus {
   subscribeAll(handler: EventHandler): void {
     // Wrap handler for wildcard subscription
     const wrappedHandler = async (eventName: PropertyKey, event: DomainEvent<any>) => {
+      // Skip internal error channel to prevent infinite recursion:
+      // wildcard throws → emit error → wildcard fires again → throws → ...
+      if (eventName === EmitteryEventBus.ERROR_EVENT) return
+
       try {
         await handler(event)
       } catch (error) {

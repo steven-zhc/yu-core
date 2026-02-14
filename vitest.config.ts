@@ -1,12 +1,17 @@
-import { defineConfig } from 'vitest/config';
+import { defineConfig } from 'vitest/config'
 
 export default defineConfig({
   test: {
+    name: 'yu-core',
     environment: 'node',
-    include: [
-      'tests/**/*.test.ts',
-      'src/**/__tests__/*.{test,spec}.ts',
-    ],
-    globals: true
-  }
-});
+    include: ['src/**/__tests__/*.{test,spec}.ts'],
+    exclude: ['dist/**', 'node_modules/**'],
+    globals: true,
+    pool: 'threads',
+    poolOptions: {
+      threads: {
+        maxThreads: 2,
+      },
+    },
+  },
+})
