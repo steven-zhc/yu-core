@@ -5,7 +5,7 @@
 
 import Emittery from 'emittery'
 import { type DomainEvent, showDomainEvent } from './domain-event.js'
-import { toDomainErrorWithDef, toDomainError, mapToDomainError, DomainError, showDomainError } from './domain-error.js'
+import { mapToDomainError, DomainError, showDomainError } from './domain-error.js'
 import { EventBusError } from './common-error.js'
 
 /**
