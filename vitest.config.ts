@@ -8,10 +8,6 @@ export default defineConfig({
     exclude: ['dist/**', 'node_modules/**'],
     globals: true,
     pool: 'threads',
-    poolOptions: {
-      threads: {
-        maxThreads: 2,
-      },
-    },
+    maxThreads: 2,
   },
 })
