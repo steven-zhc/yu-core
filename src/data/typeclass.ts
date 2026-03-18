@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * Traversable Protocol
  *
@@ -75,7 +76,7 @@ export interface Traversable {
    *
    * The concrete types for `t` (container) are determined by the implementation.
    */
-  traverse: <A, B>(applicative: Applicative) => (f: (value: A) => any) => (container: any) => any
+  traverse: <A>(applicative: Applicative) => (f: (value: A) => any) => (container: any) => any
 }
 
 /**
@@ -105,6 +106,6 @@ export interface Traversable {
  */
 export const traverse =
   (instance: Traversable, applicative: Applicative) =>
-  <A, B>(f: (value: A) => any) =>
+  <A>(f: (value: A) => any) =>
   (container: any): any =>
-    instance.traverse<A, B>(applicative)(f)(container)
+    instance.traverse<A>(applicative)(f)(container)

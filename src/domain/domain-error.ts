@@ -113,7 +113,7 @@ export const mapToDomainErrorWithDef =
     return toDomainErrorWithDef(def, metadata)(error)
   }
 
-export const showDomainError = <T>(error: DomainError): string => {
+export const showDomainError = (error: DomainError): string => {
   const meta = error._metadata
     ? ' :: ' +
       Object.entries(error._metadata)
