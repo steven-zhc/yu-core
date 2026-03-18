@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * EventBus for domain events with pub/sub pattern.
  * Provides asynchronous event handling using Emittery.

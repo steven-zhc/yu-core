@@ -2,6 +2,7 @@ import { DomainEvent } from '../domain/index.js'
 
 export abstract class AggregateRoot<TId = string> {
   readonly id: TId
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   protected _events: Array<DomainEvent<any>>
 
   protected constructor(id: TId) {
@@ -9,14 +10,17 @@ export abstract class AggregateRoot<TId = string> {
     this._events = []
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   record(event: DomainEvent<any>): void {
     this._events.push(event)
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   fetchEvents(): ReadonlyArray<DomainEvent<any>> {
     return this._events
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   pullEvents(): Array<DomainEvent<any>> {
     const out = this._events
     this._events = []

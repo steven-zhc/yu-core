@@ -156,6 +156,7 @@ export const domainEventToJSON = <T>(event: DomainEvent<T>) => ({
  */
 export type EventDef<P> = { Payload: P; Event: DomainEvent<P> }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 type DomainEventMatcherInput<TReturn> = Record<string, (event: DomainEvent<any>) => TReturn>
 
 export const matchDomainEvent = <TReturn>(

@@ -261,8 +261,11 @@ export const getOrElse =
  */
 export const PatchTraversable = {
   traverse:
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     <A, B>(applicative: any) =>
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (f: (value: A) => any) =>
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (patch: Patch<A>): any => {
       // Use the provided Applicative's operations (pure and map)
       switch (patch._tag) {

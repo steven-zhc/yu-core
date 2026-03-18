@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { describe, it, expect } from 'vitest'
 import { createEventBus, type EventBus, type EventBusErrorEvent } from '../event-bus.js'
 import { mkDomainEvent, type DomainEvent } from '../domain-event.js'
