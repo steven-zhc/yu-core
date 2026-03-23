@@ -121,7 +121,7 @@ export const mkSystemEventWithoutAggregate = <T>(
 }
 
 export const showDomainEvent = <T>(e: DomainEvent<T>): string => {
-  let payloadStr = ''
+  let payloadStr: string
   try {
     payloadStr = JSON.stringify(e.payload)
   } catch {
