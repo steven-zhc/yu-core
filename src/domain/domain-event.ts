@@ -156,6 +156,9 @@ export const domainEventToJSON = <T>(event: DomainEvent<T>) => ({
  */
 export type EventDef<P> = { Payload: P; Event: DomainEvent<P> }
 
+/** Empty payload type for events that carry no domain data (e.g., delete events). */
+export type EmptyPayload = Record<string, never>
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type DomainEventMatcherInput<TReturn> = Record<string, (event: DomainEvent<any>) => TReturn>
 
