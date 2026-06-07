@@ -4,6 +4,16 @@
  */
 export type ErrorMetadata = Record<string, unknown>
 
+/** A primitive value accepted by OpenTelemetry / Sentry span attributes. */
+export type SpanAttributeValue = string | number | boolean
+
+/** Default namespace for flattened metadata attributes. */
+const META_ATTR_PREFIX = 'error.meta.'
+/** Cardinality guard: at most this many metadata entries are flattened. */
+const META_ATTR_MAX_KEYS = 16
+/** Bound on any single flattened attribute value (chars). */
+const META_ATTR_MAX_LEN = 500
+
 export class DomainError extends Error {
   readonly _tag: string
   readonly createdAt: Date
@@ -28,6 +38,37 @@ export class DomainError extends Error {
     }
     const value = this._metadata[key]
     return value === undefined ? def : (value as T)
+  }
+
+  /**
+   * Flatten `_metadata` into telemetry-ready span attributes.
+   *
+   * - Keys are namespaced under `prefix` (default `error.meta.`).
+   * - Values are coerced to primitives (objects/arrays → JSON), capped at
+   *   {@link META_ATTR_MAX_LEN} chars, with at most {@link META_ATTR_MAX_KEYS}
+   *   entries — bounding both per-value size and total cardinality on a span.
+   * - `null` / `undefined` entries are dropped.
+   *
+   * PURELY STRUCTURAL — performs NO PII scrubbing. Metadata is free-form and may
+   * carry user data (emails, IDs, third-party error text); callers that emit
+   * these attributes to telemetry are responsible for redaction.
+   */
+  flattenedMetadata(prefix: string = META_ATTR_PREFIX): Record<string, SpanAttributeValue> {
+    if (!this._metadata) {
+      return {}
+    }
+    const out: Record<string, SpanAttributeValue> = {}
+    for (const [key, value] of Object.entries(this._metadata).slice(0, META_ATTR_MAX_KEYS)) {
+      if (value === null || value === undefined) {
+        continue
+      }
+      const coerced: SpanAttributeValue =
+        typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean'
+          ? value
+          : JSON.stringify(value)
+      out[`${prefix}${key}`] = typeof coerced === 'string' ? coerced.slice(0, META_ATTR_MAX_LEN) : coerced
+    }
+    return out
   }
 }
 

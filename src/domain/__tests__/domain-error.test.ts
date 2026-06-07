@@ -404,4 +404,47 @@ describe('DomainError', () => {
       expect(metadata.field).toBe('value')
     })
   })
+
+  describe('flattenedMetadata', () => {
+    it('returns {} when there is no metadata', () => {
+      expect(mkDomainError('E', 'no meta').flattenedMetadata()).toEqual({})
+    })
+
+    it('namespaces keys under error.meta. and passes primitives through', () => {
+      const error = mkDomainError('E', 'm', { operation: 'fetch', ms: 500, ok: true })
+      expect(error.flattenedMetadata()).toEqual({
+        'error.meta.operation': 'fetch',
+        'error.meta.ms': 500,
+        'error.meta.ok': true,
+      })
+    })
+
+    it('honors a custom prefix', () => {
+      const error = mkDomainError('E', 'm', { field: 'name' })
+      expect(error.flattenedMetadata('attr.')).toEqual({ 'attr.field': 'name' })
+    })
+
+    it('JSON-stringifies objects and arrays (OTel rejects nested values)', () => {
+      const error = mkDomainError('E', 'm', { tags: ['a', 'b'], nested: { x: 1 } })
+      const out = error.flattenedMetadata()
+      expect(out['error.meta.tags']).toBe('["a","b"]')
+      expect(out['error.meta.nested']).toBe('{"x":1}')
+    })
+
+    it('drops null / undefined entries', () => {
+      const error = mkDomainError('E', 'm', { a: 'keep', b: null, c: undefined })
+      expect(error.flattenedMetadata()).toEqual({ 'error.meta.a': 'keep' })
+    })
+
+    it('caps a single value at 500 chars', () => {
+      const error = mkDomainError('E', 'm', { big: 'x'.repeat(1000) })
+      expect((error.flattenedMetadata()['error.meta.big'] as string).length).toBe(500)
+    })
+
+    it('caps the number of flattened keys at 16', () => {
+      const meta: ErrorMetadata = {}
+      for (let i = 0; i < 30; i++) meta[`k${i}`] = i
+      expect(Object.keys(mkDomainError('E', 'm', meta).flattenedMetadata())).toHaveLength(16)
+    })
+  })
 })
